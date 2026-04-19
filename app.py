@@ -247,7 +247,7 @@ if uploaded_file:
             st.session_state["analysis"] = True
 
         if st.session_state.get("analysis", False):
-            analysis = run_analysis(output_df,api_key)
+            analysis = run_analysis(output_df)
 
             col1, col2 = st.columns(2)
 
