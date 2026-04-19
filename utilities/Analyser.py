@@ -1,7 +1,9 @@
 from groq import Groq
 import json
 import ast
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 def extract_and_parse(text: str):
     start = text.find('{')
@@ -25,8 +27,8 @@ def extract_and_parse(text: str):
         return None
 
 
-def run_analysis(data,api_key):
-    client = Groq(api_key=api_key)
+def run_analysis(data):
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     extra_instructions = ""
     completion = client.chat.completions.create(
         model="openai/gpt-oss-120b",
