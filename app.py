@@ -66,9 +66,11 @@ st.markdown("""
     backdrop-filter: blur(8px);
     margin-bottom: 20px;
 }
-
+insights {
+    color: white:            
+}
 .logo-box img {
-    width: 110px;
+    width: 250px;
     border-radius: 12px;
 }
 
@@ -139,7 +141,38 @@ def preprocess(df):
     df["day"] = df["Timestamp"].dt.day
 
     return df
+def info_card(text):
+    st.markdown(f"""
+    <div style="
+        background-color: white;
+        color: #1e293b;
+        padding: 12px 16px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        border-left: 6px solid #3b82f6;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+        font-weight: 500;
+    ">
+        {text}
+    </div>
+    """, unsafe_allow_html=True)
 
+
+def error_card(text):
+    st.markdown(f"""
+    <div style="
+        background-color: white;
+        color: #7f1d1d;
+        padding: 12px 16px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        border-left: 6px solid #ef4444;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
+        font-weight: 500;
+    ">
+        {text}
+    </div>
+    """, unsafe_allow_html=True)
 # =========================
 # MODEL RUNNER
 # =========================
@@ -219,7 +252,7 @@ if uploaded_file:
         def plot_section(model, x, raw):
             plt.figure(figsize=(5,3))
             model.plot_prediction(x, raw, idx=0)
-            st.pyplot(plt.gcf(),width=600)
+            st.pyplot(plt.gcf(),width=1100)
             plt.clf()
 
         with tab1:
@@ -252,12 +285,14 @@ if uploaded_file:
             col1, col2 = st.columns(2)
 
             with col1:
+                st.markdown("### 💡 Suggestions")
                 for s in analysis.get("Suggestions", []):
-                    st.info(s)
+                    info_card(s)
 
             with col2:
+                st.markdown("### ⚠️ Immediate Actionables")
                 for a in analysis.get("Immediate Actionables", []):
-                    st.error(a)
+                    error_card(a)
 
         # =========================
         # REPORT GENERATOR
@@ -275,7 +310,7 @@ if uploaded_file:
             else:
                 df_r = pd.read_excel(report_file)
 
-                text = answer_generation(df_r.head(300), template, api_key)
+                text = answer_generation(df_r, template, api_key)
                 file = "report.docx"
 
                 save_to_word_advanced(text, file)
