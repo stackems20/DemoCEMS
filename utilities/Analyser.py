@@ -25,8 +25,8 @@ def extract_and_parse(text: str):
         return None
 
 
-def run_analysis(data):
-    client = Groq(api_key="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")
+def run_analysis(data,api_key):
+    client = Groq(api_key=api_key)
     extra_instructions = ""
     completion = client.chat.completions.create(
         model="openai/gpt-oss-120b",

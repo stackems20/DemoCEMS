@@ -7,3 +7,4 @@ pytorch-forecasting==1.7.0
 pytorch-lightning==2.6.1
 streamlit==1.56.0
 python-dotenv==1.2.2
+matplotlib
