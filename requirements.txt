@@ -1,0 +1,9 @@
+groq==1.1.2
+lightning==2.6.1
+numpy==1.26.4
+openpyxl==3.1.5
+python-docx==1.2.0
+pytorch-forecasting==1.7.0
+pytorch-lightning==2.6.1
+streamlit==1.56.0
+python-dotenv==1.2.2
