@@ -141,6 +141,91 @@ def preprocess(df):
     df["day"] = df["Timestamp"].dt.day
 
     return df
+
+def compute_status_stats(pred, window=24):
+    # use last `window` points (or fewer if not enough)
+    w = min(window, len(pred))
+    recent = pred[-w:]
+
+    avg_pred = float(recent.mean())
+    max_pred = float(recent.max())
+
+    # simple trend: compare last half vs first half
+    half = max(1, w // 2)
+    first_half = recent[:half].mean()
+    second_half = recent[-half:].mean()
+
+    if second_half > first_half * 1.02:
+        trend = "up"      # worsening
+    elif second_half < first_half * 0.98:
+        trend = "down"    # improving
+    else:
+        trend = "flat"
+
+    return avg_pred, max_pred, trend
+
+def status_badge_from_stats(avg_val, max_val, trend, param):
+    # tune limits as per your plant/CPCB norms
+    limits = {
+        "NOx": (800, 900),
+        "SO2": (100, 200),
+        "PM":  (30, 50)
+    }
+    low, high = limits[param]
+
+    # decide status (conservative: consider max as well)
+    if avg_val <= low and max_val <= high:
+        color, label = "#16a34a", "Normal"
+    elif avg_val <= high:
+        color, label = "#f59e0b", "Warning"
+    else:
+        color, label = "#ef4444", "Critical"
+
+    trend_icon = {"up": "🔺", "down": "🔻", "flat": "➡️"}[trend]
+
+    st.markdown(f"""
+    <div style="text-align:center; margin-top:8px;">
+        <div style="
+            background:{color};
+            color:white;
+            padding:6px 14px;
+            border-radius:20px;
+            font-size:13px;
+            font-weight:600;
+            display:inline-block;
+        ">
+            {label} {trend_icon}
+        </div>
+        <div style="font-size:12px; color:gray; margin-top:4px;">
+            Avg: {avg_val:.1f} | Max: {max_val:.1f}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def advanced_plot(actual, pred, title):
+
+    df_plot = pd.DataFrame({
+        "Actual": actual,
+        "Predicted": pred
+    })
+
+    st.markdown(f"### 📈 {title} - Detailed Analysis")
+
+    col1, col2 = st.columns(2)
+
+    # ---- Line Chart ----
+    with col1:
+        st.line_chart(df_plot)
+
+    # ---- Residuals ----
+    with col2:
+        residuals = actual - pred
+        st.line_chart(residuals)
+
+    # ---- Distribution ----
+    st.markdown("#### Distribution")
+    st.bar_chart(df_plot)
+
 def info_card(text):
     st.markdown(f"""
     <div style="
@@ -217,6 +302,7 @@ def run_model(df, target, training_file, model_file):
 
     pred = raw["prediction"][:, :, raw["prediction"].shape[2] // 2].detach().cpu().numpy().flatten()
     actual = x["decoder_target"].detach().cpu().numpy().flatten()
+    
 
     return model, x, raw, actual, pred
 
@@ -246,6 +332,7 @@ if uploaded_file:
                 st.session_state["data"] = {"nox": nox, "so2": so2, "pm": pm}
 
         data = st.session_state["data"]
+        
 
         tab1, tab2, tab3 = st.tabs(["NOx", "SO2", "PM"])
 
@@ -255,12 +342,39 @@ if uploaded_file:
             st.pyplot(plt.gcf(),width=1100)
             plt.clf()
 
+        st.markdown("## ⚠️ Status")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            avg_nox, max_nox, tr_nox = compute_status_stats(data["nox"][3], window=24)
+            st.metric("NOx (Avg)", f"{avg_nox:.2f}")
+            status_badge_from_stats(avg_nox, max_nox, tr_nox, "NOx")
+
+        with col2:
+            avg_so2, max_so2, tr_so2 = compute_status_stats(data["so2"][3], window=24)
+            st.metric("SO2 (Avg)", f"{avg_so2:.2f}")
+            status_badge_from_stats(avg_so2, max_so2, tr_so2, "SO2")
+
+        with col3:
+            avg_pm, max_pm, tr_pm = compute_status_stats(data["pm"][3], window=24)
+            st.metric("PM (Avg)", f"{avg_pm:.2f}")
+            status_badge_from_stats(avg_pm, max_pm, tr_pm, "PM")
+
         with tab1:
-            plot_section(*data["nox"][:3])
+            nox_model, nox_x, nox_raw, nox_actual, nox_pred = data["nox"]
+            # plot_section(nox_model, nox_x, nox_raw)
+            advanced_plot(nox_actual, nox_pred, "NOx")
+
         with tab2:
-            plot_section(*data["so2"][:3])
+            so2_model, so2_x, so2_raw, so2_actual, so2_pred = data["so2"]
+            # plot_section(so2_model, so2_x, so2_raw)
+            advanced_plot(so2_actual, so2_pred, "SO2")
+
         with tab3:
-            plot_section(*data["pm"][:3])
+            pm_model, pm_x, pm_raw, pm_actual, pm_pred = data["pm"]
+            # plot_section(pm_model, pm_x, pm_raw)
+            advanced_plot(pm_actual, pm_pred, "PM")
 
         # =========================
         # OUTPUT
